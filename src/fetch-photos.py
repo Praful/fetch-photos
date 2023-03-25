@@ -13,6 +13,7 @@ import time
 import datetime
 import shutil
 import argparse
+import re
 
 
 def setup_command_line():
@@ -25,15 +26,15 @@ def setup_command_line():
                          help='Folder to copy from')
     cmdline.add_argument('--to', dest='dest', type=str, required=True,
                          help='Folder to copy to')
+    cmdline.add_argument('--exclude', dest='exclude', type=str, required=False,
+                         help='Exclude paths containing this')
+    cmdline.add_argument('--include', dest='include', type=str, required=False,
+                         help='Include paths containing this; overrides --exclude')
 
     return cmdline
 
-#  source_root = os.path.expanduser('/media/praful/disk/DCIM')
-#  dest_root = os.path.expanduser('~/Pictures')
-
-
-def move_files(source_root, dest_root):
-    file_count = files_copied = files_exist = file_errors = 0
+def move_files(source_root, dest_root, exclude, include):
+    file_count = files_copied = files_exist = file_errors = files_excluded = 0
 
     for filepath in glob.iglob(source_root + '**/**', recursive=True):
 
@@ -41,6 +42,16 @@ def move_files(source_root, dest_root):
 
         if os.path.isfile(filepath):
             file_count += 1
+
+            #TODO accept more than one string to exclude and include
+
+            do_include = re.search(rf'{include}', filepath)
+
+            if not do_include:
+                if exclude is not None and exclude in filepath:
+                    print('Excluding', filepath)
+                    files_excluded += 1
+                    continue
 
             year, month, day, hour, minute, second = time.localtime(creation_date)[
                 :-3]
@@ -52,7 +63,7 @@ def move_files(source_root, dest_root):
             print(filepath, dest_file)
 
             if not os.path.exists(dest_file):
-                print('copying', filepath)
+                print('Copying', filepath)
                 if not os.path.exists(photo_dir):
                     os.makedirs(photo_dir)
                 res = shutil.copy2(filepath, photo_dir)
@@ -67,7 +78,7 @@ def move_files(source_root, dest_root):
                 files_exist += 1
 
     print(
-        f'Total files: {file_count}\nCopied: {files_copied}\nSkipped: {files_exist}\nErrors: {file_errors}')
+            f'Total files: {file_count}\nCopied: {files_copied}\nSkipped: {files_exist}\nExcluded: {files_excluded}\nErrors: {file_errors}')
 
 
 def main():
@@ -76,7 +87,7 @@ def main():
     """
     args = setup_command_line().parse_args()
     print(args)
-    move_files(os.path.expanduser(args.source), os.path.expanduser(args.dest))
+    move_files(os.path.expanduser(args.source), os.path.expanduser(args.dest), args.exclude, args.include)
 
 
 if __name__ == '__main__':
