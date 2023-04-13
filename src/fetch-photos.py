@@ -27,13 +27,18 @@ def setup_command_line():
     cmdline.add_argument('--to', dest='dest', type=str, required=True,
                          help='Folder to copy to')
     cmdline.add_argument('--exclude', dest='exclude', type=str, required=False,
-                         help='Exclude paths containing this')
+                         help='Exclude paths containing this string')
     cmdline.add_argument('--include', dest='include', type=str, required=False,
-                         help='Include paths containing this; overrides --exclude')
+                         help='Include paths containing this regex; overrides --exclude')
+    cmdline.add_argument('--verbose', action=argparse.BooleanOptionalAction,
+                         default=False, help='Provides verbose output')
 
     return cmdline
 
-def move_files(source_root, dest_root, exclude, include):
+def must_include(filepath, regex):
+    return re.search(rf'{regex}', filepath) is not None
+
+def move_files(source_root, dest_root, exclude, include_regex, verbose):
     file_count = files_copied = files_exist = file_errors = files_excluded = 0
 
     for filepath in glob.iglob(source_root + '**/**', recursive=True):
@@ -45,11 +50,10 @@ def move_files(source_root, dest_root, exclude, include):
 
             #TODO accept more than one string to exclude and include
 
-            do_include = re.search(rf'{include}', filepath)
-
-            if not do_include:
-                if exclude is not None and exclude in filepath:
-                    print('Excluding', filepath)
+            if exclude is not None and not must_include(filepath, include_regex):
+                if exclude in filepath:
+                    if verbose:
+                        print('Excluding', filepath)
                     files_excluded += 1
                     continue
 
@@ -60,21 +64,23 @@ def move_files(source_root, dest_root, exclude, include):
 
             dest_file = os.path.join(dest_root, date, filename)
             photo_dir = os.path.join(dest_root, date)
-            print(filepath, dest_file)
+            if verbose:
+                print(filepath, dest_file)
 
             if not os.path.exists(dest_file):
-                print('Copying', filepath)
+                print('Copying', filepath, end=' ')
                 if not os.path.exists(photo_dir):
                     os.makedirs(photo_dir)
                 res = shutil.copy2(filepath, photo_dir)
                 if os.path.exists(dest_file):
-                    print('====> Done:', res)
+                    print('====> done:', res)
                     files_copied += 1
                 else:
                     print('====> FAILED:', res)
                     file_errors += 1
             else:
-                print('====> Skipping: file already exists in destination folder')
+                if verbose:
+                    print('====> Skipping: file already exists in destination folder')
                 files_exist += 1
 
     print(
@@ -87,7 +93,7 @@ def main():
     """
     args = setup_command_line().parse_args()
     print(args)
-    move_files(os.path.expanduser(args.source), os.path.expanduser(args.dest), args.exclude, args.include)
+    move_files(os.path.expanduser(args.source), os.path.expanduser(args.dest), args.exclude, args.include, args.verbose)
 
 
 if __name__ == '__main__':
