@@ -15,6 +15,44 @@ import shutil
 import argparse
 import re
 
+# python -m pip install Pillow
+from PIL import Image
+from PIL.ExifTags import TAGS
+
+# python -m pip install Pillow-heif (this provides support for heic files)
+from pillow_heif import register_heif_opener
+register_heif_opener()
+
+EXIF_DATATIME = 306
+
+
+def date_taken(filepath):
+    try:
+        im = Image.open(filepath)
+        exif = im.getexif()
+        if exif is not None:
+            date = exif.get(EXIF_DATATIME)
+            if date is not None:
+                return (date.split(' ')[0]).replace(":", "-")
+    except Exception as ex:
+        #  print('No date taken:', ex)
+        None
+
+    return None
+    #  print('Error getting date taken: ', ex, filepath)
+
+
+def filestamp_to_local_date_str(d):
+    year, month, day, hour, minute, second = time.localtime(d)[
+        :-3]
+    return "%d-%02d-%02d" % (year, month, day)
+
+
+def filestamp_to_utc_date_str(d):
+    year, month, day, hour, minute, second = time.gmtime(d)[
+        :-3]
+    return "%d-%02d-%02d" % (year, month, day)
+
 
 def setup_command_line():
     """
@@ -35,20 +73,31 @@ def setup_command_line():
 
     return cmdline
 
+
 def must_include(filepath, regex):
     return re.search(rf'{regex}', filepath) is not None
+
+
+def get_creation_date(filepath):
+    date_taken_exif = date_taken(filepath)
+
+    if date_taken_exif is not None:
+        return date_taken_exif
+    else:
+        creation_timestamp = os.path.getctime(filepath)
+        #  date_local = filestamp_to_local_date_str(creation_timestamp)
+        return filestamp_to_utc_date_str(creation_timestamp)
+
 
 def move_files(source_root, dest_root, exclude, include_regex, verbose):
     file_count = files_copied = files_exist = file_errors = files_excluded = 0
 
     for filepath in glob.iglob(source_root + '**/**', recursive=True):
 
-        creation_date = os.path.getctime(filepath)
-
         if os.path.isfile(filepath):
             file_count += 1
 
-            #TODO accept more than one string to exclude and include
+            # TODO accept more than one string to exclude and include
 
             if exclude is not None and not must_include(filepath, include_regex):
                 if exclude in filepath:
@@ -57,13 +106,12 @@ def move_files(source_root, dest_root, exclude, include_regex, verbose):
                     files_excluded += 1
                     continue
 
-            year, month, day, hour, minute, second = time.localtime(creation_date)[
-                :-3]
-            date = "%d-%02d-%02d" % (year, month, day)
+            creation_date = get_creation_date(filepath)
+
             _, filename = os.path.split(filepath)
 
-            dest_file = os.path.join(dest_root, date, filename)
-            photo_dir = os.path.join(dest_root, date)
+            dest_file = os.path.join(dest_root, creation_date, filename)
+            photo_dir = os.path.join(dest_root, creation_date)
             if verbose:
                 print(filepath, dest_file)
 
@@ -84,7 +132,7 @@ def move_files(source_root, dest_root, exclude, include_regex, verbose):
                 files_exist += 1
 
     print(
-            f'Total files: {file_count}\nCopied: {files_copied}\nSkipped: {files_exist}\nExcluded: {files_excluded}\nErrors: {file_errors}')
+        f'Total files: {file_count}\nCopied: {files_copied}\nSkipped: {files_exist}\nExcluded: {files_excluded}\nErrors: {file_errors}')
 
 
 def main():
@@ -93,7 +141,8 @@ def main():
     """
     args = setup_command_line().parse_args()
     print(args)
-    move_files(os.path.expanduser(args.source), os.path.expanduser(args.dest), args.exclude, args.include, args.verbose)
+    move_files(os.path.expanduser(args.source), os.path.expanduser(
+        args.dest), args.exclude, args.include, args.verbose)
 
 
 if __name__ == '__main__':
