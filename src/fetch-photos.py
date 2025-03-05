@@ -39,8 +39,8 @@ def exif_date_original(filepath):
             if date is not None:
                 return (date.split(' ')[0]).replace(":", "-")
     except Exception as ex:
-        print('No date taken:', ex)
-        #  None
+        #  print('No date taken:', ex)
+        None
 
     return None
     #  print('Error getting date taken: ', ex, filepath)
