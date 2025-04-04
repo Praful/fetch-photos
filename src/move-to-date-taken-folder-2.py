@@ -12,7 +12,8 @@ Author: Praful https://github.com/Praful/fetch-photos
 Licence: GPL v3
 =============================================================================
 """
-#  python /home/praful/data/dev/projects/fetch-photos/src/fetch-photos.py --from /mnt/sd512/data/pictures/phone-s24ultra --to /mnt/sd512/data/pictures/phone-s24ultra
+# py ./move-to-date-taken-folder-2.py --dir /mnt/sd512/data/pictures/phone-s24ultra --exclude '.mp4'
+#
 import glob
 import os
 import time
@@ -123,6 +124,7 @@ def exif_date(filepath):
     return None
     #  print('Error getting date taken: ', ex, filepath)
 
+
 def filestamp_to_local_date_str(d):
     year, month, day, hour, minute, second = time.localtime(d)[
         :-3]
@@ -205,7 +207,6 @@ def update_file_location(source_root, exclude, include_regex, verbose):
                 date_to_use = date_utc
 
             _, filename = os.path.split(filepath)
-
 
             #  dest_file_old = os.path.join( dest_root, get_creation_date2(filepath), filename)
             dest_file_old = filepath
