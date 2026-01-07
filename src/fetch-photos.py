@@ -130,10 +130,13 @@ def get_creation_date(filepath):
         return date_exif
     else:
         # changed 4/4/2025 - don't use file creation date since we should always
-        # find exif data
-        return None
-        #  creation_timestamp = os.path.getctime(filepath)
-        #  return filestamp_to_utc_date_str(creation_timestamp)
+        # changed 7/1/2026 - sometimes exif data is missing; use creation date otherwise
+        # file won't be copied.
+        #  return None
+        creation_timestamp = os.path.getctime(filepath)
+        result = filestamp_to_utc_date_str(creation_timestamp)
+        print(f'====> {filepath}: no exif data found. Using creation date {result}')
+        return result
 
 def print_color(color, *text):
     print(color, *text, Style.RESET_ALL)
