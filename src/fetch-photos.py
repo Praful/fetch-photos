@@ -1,3 +1,10 @@
+# /// script
+# dependencies = [
+#   "Pillow",
+#   "Pillow-heif",
+#   "colorama"
+# ]
+# ///
 """
 =============================================================================
 File: fetch-photos.py
